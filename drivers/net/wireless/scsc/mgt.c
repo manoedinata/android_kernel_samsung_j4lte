@@ -5113,16 +5113,6 @@ int slsi_set_mib_wifi_sharing_5ghz_channel(struct slsi_dev *sdev, u16 psid, int 
 	int p = 0;
 	int new_channels = 0;
 	int freq_to_be_checked = 0;
-	int indoor_chan_arg = 0;
-
-	ioctl_args = slsi_get_private_command_args(buf, buf_len, 26);
-	SLSI_VERIFY_IOCTL_ARGS(sdev, ioctl_args);
-
-	if (!slsi_str_to_int(ioctl_args->args[0], &indoor_chan_arg)) {
-		SLSI_ERR(sdev, "Invalid channel_count string: '%s'\n", ioctl_args->args[0]);
-		error = -EINVAL;
-		goto exit;
-	}
 
 	mib_entry.value.type = SLSI_MIB_TYPE_OCTET;
 	mib_entry.value.u.octetValue.dataLength = 8;

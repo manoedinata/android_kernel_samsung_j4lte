@@ -3013,8 +3013,9 @@ int slsi_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 		ret = slsi_delete_interface(dev, command, priv_cmd.total_len);
 #endif
 	} else if (strncasecmp(command, CMD_SET_INDOOR_CHANNELS, strlen(CMD_SET_INDOOR_CHANNELS)) == 0) {
-		ret = slsi_set_mib_wifi_sharing_5ghz_channel(dev, SLSI_PSID_UNIFI_WI_FI_SHARING5_GHZ_CHANNEL,
-							     command, priv_cmd.total_len);
+		char *arg = command + strlen(CMD_SET_INDOOR_CHANNELS) + 1;
+
+		ret = slsi_set_indoor_channels(dev, arg);
 	} else if (strncasecmp(command, CMD_GET_INDOOR_CHANNELS, strlen(CMD_GET_INDOOR_CHANNELS)) == 0) {
 		ret = slsi_get_indoor_channels(dev, command, priv_cmd.total_len);
 #endif
