@@ -2844,7 +2844,12 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	unsigned int real_size, virt_size, size;
 	struct fb_info *fbi = win->fbinfo;
 	dma_addr_t map_dma;
-
+#if defined(CONFIG_ION_EXYNOS)
+	struct ion_handle *handle;
+	struct dma_buf *buf;
+	void *vaddr;
+	unsigned int ret;
+#endif
 	dev_info(decon->dev, "allocating memory for display\n");
 
 	real_size = windata->win_mode.videomode.xres * windata->win_mode.videomode.yres;
@@ -2863,6 +2868,34 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 
 	dev_info(decon->dev, "want %u bytes for window[%d]\n", size, win->index);
 
+#if defined(CONFIG_ION_EXYNOS)
+	handle = ion_alloc(decon->ion_client, (size_t)size, 0,
+					EXYNOS_ION_HEAP_SYSTEM_MASK, 0);
+	if (IS_ERR(handle)) {
+		dev_err(decon->dev, "failed to ion_alloc\n");
+		return -ENOMEM;
+	}
+
+	buf = ion_share_dma_buf(decon->ion_client, handle);
+	if (IS_ERR_OR_NULL(buf)) {
+		dev_err(decon->dev, "ion_share_dma_buf() failed\n");
+		goto err_share_dma_buf;
+	}
+
+	vaddr = ion_map_kernel(decon->ion_client, handle);
+
+	fbi->screen_base = vaddr;
+
+	win->dma_buf_data[1].fence = NULL;
+	win->dma_buf_data[2].fence = NULL;
+	ret = decon_map_ion_handle(decon, decon->dev, &win->dma_buf_data[0],
+			handle, buf, win->index);
+	if (!ret)
+		goto err_map;
+	map_dma = win->dma_buf_data[0].dma_addr;
+
+	dev_info(decon->dev, "alloated memory\n");
+#else
 	fbi->screen_base = dma_alloc_writecombine(decon->dev, size,
 						  &map_dma, GFP_KERNEL);
 	if (!fbi->screen_base)
@@ -2872,11 +2905,20 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 		(unsigned int)map_dma, fbi->screen_base);
 
 	memset(fbi->screen_base, 0x0, size);
+#endif
 	fbi->fix.smem_start = map_dma;
 
 	dev_info(decon->dev, "fb start addr = 0x%x\n", (u32)fbi->fix.smem_start);
 
 	return 0;
+
+#ifdef CONFIG_ION_EXYNOS
+err_map:
+	dma_buf_put(buf);
+err_share_dma_buf:
+	ion_free(decon->ion_client, handle);
+	return -ENOMEM;
+#endif
 }
 
 static void decon_missing_pixclock(struct decon_fb_videomode *win_mode)
