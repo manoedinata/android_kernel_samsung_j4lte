@@ -2871,7 +2871,7 @@ static int decon_fb_alloc_memory(struct decon_device *decon, struct decon_win *w
 	dev_dbg(decon->dev, "mapped %x to %p\n",
 		(unsigned int)map_dma, fbi->screen_base);
 
-	//memset(fbi->screen_base, 0x0, size);
+	memset(fbi->screen_base, 0x0, size);
 	fbi->fix.smem_start = map_dma;
 
 	dev_info(decon->dev, "fb start addr = 0x%x\n", (u32)fbi->fix.smem_start);
